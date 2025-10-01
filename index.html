@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+<header class="app-header">
+<h1>USDT⇄ARS (Belo / CocosCrypto)</h1>
+<p class="muted">Actualización en tiempo real.</p>
+</header>
+
+
+<main class="container">
+<section class="panel">
+<h2>Parámetros</h2>
+<div class="grid">
+<label class="field">
+<span>Volumen (ARS)</span>
+<input id="volumen" type="number" min="0" step="1" />
+</label>
+
+
+<label class="field">
+<span>Oficial (ARS por USD)</span>
+<input id="oficial" type="number" min="0" step="0.0001" />
+</label>
+
+
+<label class="field">
+<span>Comisión (USDT)</span>
+<input id="comision" type="number" min="0" step="0.0001" />
+</label>
+</div>
+</section>
+
+
+<section class="panel">
+<h2>Resultados</h2>
+<div id="prints" class="console"></div>
+<div class="meta">
+<span id="status">⏳ Esperando datos…</span>
+<button id="refresh" class="btn">Actualizar ahora</button>
+</div>
+</section>
+
+
+<section class="panel">
+<h2>Precios usados</h2>
+<div class="prices">
+<div class="price-card">
+<h3>Belo — USD/USDT</h3>
+<div>Vendé a: <span id="beloUsdAsk">—</span></div>
+</div>
+<div class="price-card">
+<h3>Belo — USDT/ARS</h3>
+<div>Vendé a: <span id="beloArsBid">—</span></div>
+</div>
+<div class="price-card">
+<h3>CocosCrypto — USDT/ARS</h3>
+<div>Vendé a: <span id="cocosArsBid">—</span></div>
+</div>
+</div>
+</section>
+
+
+
+<section class="panel">
+  <h2>Otros precios</h2>
+  <div class="prices">
+    <div class="price-card">
+      <h3>Belo — USDC/USD</h3>
+      <div>totalAsk: <span id="beloUsdcAsk">—</span></div>
+    </div>
+    <div class="price-card">
+      <h3>Belo — USDC/ARS</h3>
+      <div>totalBid: <span id="beloUsdcArsBid">—</span></div>
+    </div>
+    <div class="price-card">
+      <h3>CocosCrypto — USDC/ARS</h3>
+      <div>totalBid: <span id="cocosUsdcArsBid">—</span></div>
+    </div>
+  </div>
+</section>
+
+
+</main>
+
+
+<script src="assets/backend.js"></script>
+</body>
+</html>
