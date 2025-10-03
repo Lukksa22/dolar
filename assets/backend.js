@@ -220,7 +220,7 @@ function renderPrints(prices) {
   const line9 = `${nowHHMMSS()} ${pct_d}%: oficial -> fiwind${best_fiwind_coin} -> CocosCrypto -> CocosCryptoARS`;
   const line10 = `${nowHHMMSS()} ${best_ratio(prices, oficial, volumen)}`;
 
-  elPrints.textContent = [line1,line2,line3,line4,line5,line6,line7,line8,line9,line10].join("\n");
+  elPrints.textContent = [line1,line2,line3,line4,line5,line6,line7,line8,line9].join("\n");
 }
 
 // === Ciclo ===
