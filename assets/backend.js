@@ -183,7 +183,7 @@ function renderWidgets(prices) {
     const [ex, coin, fiat, action] = idMap[id];
     const v = prices?.[ex]?.[coin]?.[fiat]?.[action];
     const el = document.getElementById(id);
-    if (el) el.textContent = v != null ? (fiat === "USD" ? Number(v).toFixed(6) : Number(v).toFixed(2)) : "—";
+    if (el) el.textContent = v != null ? (fiat === "USD" ? Number(v).toFixed(4) : Number(v).toFixed(2)) : "—";
   }
 }
 
