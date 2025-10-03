@@ -1,90 +1,87 @@
 <!DOCTYPE html>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/styles.css" />
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>USD ⇄ USDT/USDC ⇄ ARS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body>
-<header class="app-header">
-<h1>USDT⇄ARS (Belo / CocosCrypto)</h1>
-<p class="muted">Actualización en tiempo real.</p>
-</header>
+  <header class="app-header">
+    <h1>USD ⇄ USDT/USDC ⇄ ARS</h1>
+<p class="muted">Actualización cada 25s.</p>
+  </header>
 
+  <main class="container">
+    <section class="panel">
+      <h2>Parámetros</h2>
+      <div class="grid">
+        <label class="field">
+          <span>Volumen (ARS)</span>
+          <input id="volumen" type="number" min="0" step="1" />
+        </label>
 
-<main class="container">
-<section class="panel">
-<h2>Parámetros</h2>
-<div class="grid">
-<label class="field">
-<span>Volumen (ARS)</span>
-<input id="volumen" type="number" min="0" step="1" />
-</label>
+        <label class="field">
+          <span>Dólar oficial (ARS por USD)</span>
+          <div class="row">
+            <input id="oficial" type="number" min="0" step="0.0001" />
+            <button id="guardarOficial" class="btn btn-secondary" title="Guardar para próximas visitas">Guardar</button>
+          </div>
+          
+        </label>
+      </div>
 
+      <p class="helper">Formula: (volumen / oficial - comision) * (Crypto) / volumen.</p>
+    </section>
 
-<label class="field">
-<span>Oficial (ARS por USD)</span>
-<input id="oficial" type="number" min="0" step="0.0001" />
-</label>
+    <section class="panel">
+      <h2>Ratios</h2>
+      <pre id="prints" class="console"></pre>
+      <div class="meta">
+        <span id="status">⏳ Esperando datos…</span>
+        <button id="refresh" class="btn">Actualizar ahora</button>
+      </div>
+    </section>
 
+    <section class="panel">
+      <h2>Precios usados</h2>
+      <div class="prices">
+        <div class="price-card">
+          <h3>Belo</h3>
+          <div class="price">USDC/ARS (Bid): <span id="belo_usdc_ars">—</span></div>
+          <div class="price">USDT/ARS (Bid): <span id="belo_usdt_ars">—</span></div>
+          <div class="price">USDT/USD (Ask): <span id="belo_usdt_usd">—</span></div>
+        </div>
+        <div class="price-card">
+          <h3>Buenbit</h3>
+          <div class="price">USDC/ARS (Bid): <span id="buenbit_usdc_ars">—</span></div>
+          <div class="price">USDT/ARS (Bid): <span id="buenbit_usdt_ars">—</span></div>
+          <div class="price">USDT/USD (Ask): <span id="buenbit_usdt_usd">—</span></div>
+        </div>
+        <div class="price-card">
+          <h3>Fiwind</h3>
+          <div class="price">USDC/ARS (Bid): <span id="fiwind_usdc_ars">—</span></div>
+          <div class="price">USTT/ARS (Bid): <span id="fiwind_usdt_ars">—</span></div>
+          <div class="price">USDT/USD (Ask): <span id="fiwind_usdt_usd">—</span></div>
+        </div>
+        <div class="price-card">
+          <h3>CocosCrypto</h3>
+          <div class="price">USDC/ARS (Bid): <span id="cocos_usdc_ars">—</span></div>
+          <div class="price">USDT/ARS (Bid): <span id="cocos_usdt_ars">—</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
 
-<label class="field">
-<span>Comisión (USDT)</span>
-<input id="comision" type="number" min="0" step="0.0001" />
-</label>
-</div>
-</section>
-
-
-<section class="panel">
-<h2>Resultados</h2>
-<div id="prints" class="console"></div>
-<div class="meta">
-<span id="status">⏳ Esperando datos…</span>
-<button id="refresh" class="btn">Actualizar ahora</button>
-</div>
-</section>
-
-
-<section class="panel">
-<h2>Precios usados</h2>
-<div class="prices">
-<div class="price-card">
-<h3>Belo — USD/USDT</h3>
-<div>Vendé a: <span id="beloUsdAsk">—</span></div>
-</div>
-<div class="price-card">
-<h3>Belo — USDT/ARS</h3>
-<div>Vendé a: <span id="beloArsBid">—</span></div>
-</div>
-<div class="price-card">
-<h3>CocosCrypto — USDT/ARS</h3>
-<div>Vendé a: <span id="cocosArsBid">—</span></div>
-</div>
-</div>
-</section>
-
-
-
-<section class="panel">
-  <h2>Otros precios</h2>
-  <div class="prices">
-    <div class="price-card">
-      <h3>Belo — USDC/USD</h3>
-      <div>totalAsk: <span id="beloUsdcAsk">—</span></div>
-    </div>
-    <div class="price-card">
-      <h3>Belo — USDC/ARS</h3>
-      <div>totalBid: <span id="beloUsdcArsBid">—</span></div>
-    </div>
-    <div class="price-card">
-      <h3>CocosCrypto — USDC/ARS</h3>
-      <div>totalBid: <span id="cocosUsdcArsBid">—</span></div>
-    </div>
-  </div>
-</section>
-
-
-</main>
-
-
-<script src="assets/backend.js"></script>
+  <script>
+    // Configuración opcional de persistencia remota:
+    // Si definís window.REMOTE_OFICIAL_URL con un endpoint que acepte:
+    //   GET  -> { value: number }
+    //   PUT  -> body JSON { value: number }  (CORS habilitado)
+    // se usará para guardar/cargar el dólar oficial de forma GLOBAL.
+    // Ej: window.REMOTE_OFICIAL_URL = "https://tuservidor.example.com/oficial";
+  </script>
+  <script defer src="assets/backend.js"></script>
 </body>
 </html>
