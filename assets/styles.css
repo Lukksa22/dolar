@@ -76,6 +76,7 @@ h2 { margin: 0 0 12px; font-size: 1.1rem; }
 .console .value { font-weight: 700; }
 .console .value.pos { color: var(--good); }
 .console .value.neg { color: var(--bad); }
+.best { color: #000000; }
 
 .meta { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
 .btn {

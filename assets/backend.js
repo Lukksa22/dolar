@@ -26,6 +26,7 @@ const idMap = {
   "fiwind_usdc_ars": ["fiwind","USDC","ARS","totalBid"],
   "fiwind_usdt_ars": ["fiwind","USDT","ARS","totalBid"],
   "fiwind_usdt_usd": ["fiwind","USDT","USD","totalAsk"],
+  "fiwind_usdc_usd": ["fiwind","USDC","USD","totalAsk"],
   "cocos_usdc_ars": ["cocoscrypto","USDC","ARS","totalBid"],
   "cocos_usdt_ars": ["cocoscrypto","USDT","ARS","totalBid"],
 };
@@ -162,7 +163,7 @@ function best_ratio(prices, oficial, volumen) {
   for (const coin of coins) {
     for (const ex_in of exchanges) {
       for (const ex_out of exchanges) {
-        const ask = prices[ex_in]?.[coin]?.USD?.totalAsk;
+        const ask = prices[exchangeCheck(ex_in)] ? prices[ex_in][coin]?.USD?.totalAsk : null;
         const bid = prices[ex_out]?.[coin]?.ARS?.totalBid;
         if (ask == null || bid == null) continue;
         const USDtoCoin = roundTo(1/ask, 4);
@@ -176,6 +177,10 @@ function best_ratio(prices, oficial, volumen) {
   const pct = (max_ratio - 1) * 100;
   return `${pct.toFixed(3)}%: oficial -> ${exc_in}${coin_max} -> ${exc_out}ARS (best ratio)`;
 }
+// helper to avoid reference error in case exchange name was accidentally mistyped
+function exchangeCheck(name){
+  return exchanges.includes(name) ? name : exchanges[0];
+}
 
 // === Render ===
 function renderWidgets(prices) {
@@ -187,15 +192,43 @@ function renderWidgets(prices) {
   }
 }
 
+/* ===========================
+   renderPrints actualizado:
+   escribe cada línea en su span correspondiente
+   y colorea según signo del primer número encontrado
+   =========================== */
+
+// extrae el primer número (puede tener signo y decimales) en un string
+function extractFirstNumber(text) {
+  if (!text) return null;
+  const m = text.match(/-?\d+(\.\d+)?/);
+  return m ? Number(m[0]) : null;
+}
+
+// aplica color directo al span según signo del número extraído
+function applyColorToSpan(span, text, i) {
+  // resetear estilo
+  span.style.color = "";
+  const num = extractFirstNumber(text);
+  if (num == null || Number.isNaN(num)) return;
+  if (i === 0) return;
+
+  if (num < 0) {
+    if (i === 6) {span.style.color = "orange"; return; }
+    span.style.color = "red";
+
+  } else if (num > 0) {
+    if (i === 6) {span.style.color = "GreenYellow"; return; }
+    span.style.color = "green";
+    
+  } else span.style.color = ""; // 0 -> usar color por defecto
+}
+
 function renderPrints(prices) {
   const volumen = Number(elVolumen.value);
   const oficial = Number(elOficial.value);
 
-  const line1 = `Belo:        USDC/ARS ${Number(prices.belo.USDC.ARS.totalBid || 0).toFixed(2)}, USDT/ARS ${Number(prices.belo.USDT.ARS.totalBid || 0).toFixed(2)}, USDT/USD ${prices.belo.USDT.USD.totalAsk ?? "—"} `;
-  const line2 = `Buenbit:     USDC/ARS ${Number(prices.buenbit.USDC.ARS.totalBid || 0).toFixed(2)}, USDT/ARS ${Number(prices.buenbit.USDT.ARS.totalBid || 0).toFixed(2)}, USDT/USD ${prices.buenbit.USDT.USD.totalAsk ?? "—"} `;
-  const line3 = `Fiwind:      USDC/ARS ${Number(prices.fiwind.USDC.ARS.totalBid || 0).toFixed(2)}, USDT/ARS ${Number(prices.fiwind.USDT.ARS.totalBid || 0).toFixed(2)}, USDT/USD ${prices.fiwind.USDT.USD.totalAsk ?? "—"} `;
-  const line4 = `CocosCrypto: USDC/ARS ${Number(prices.cocoscrypto.USDC.ARS.totalBid || 0).toFixed(2)}, USDT/ARS ${Number(prices.cocoscrypto.USDT.ARS.totalBid || 0).toFixed(2)}`;
-  const line5 = `dolar oficial: ${oficial}`;
+  const line1 = `${nowHHMMSS()} dolar oficial: ${oficial}`;
 
   const ask_belo_usdt = prices.belo.USDT.USD.totalAsk;
   const bid_belo_usdt_ars = prices.belo.USDT.ARS.totalBid;
@@ -205,25 +238,48 @@ function renderPrints(prices) {
   const pct_a = ((volumen / oficial * usdt_per_usd_belo * bid_belo_usdt_ars / volumen - 1) * 100).toFixed(3);
   const pct_b = ((((volumen / oficial * usdt_per_usd_belo) - 1) * bid_cocos_usdt_ars / volumen - 1) * 100).toFixed(3);
 
-  // Buenbit mejor coin (para USD/totalAsk mínimo). Comisión fija -0.01 como en el script proporcionado.
   const { best_value: best_buenbit_ask, best_coin: best_buenbit_coin } = best_ER_in_exchange(prices, "buenbit", ["USDC","USDT"], "USD", "totalAsk");
   const pct_c = ((((volumen / oficial * roundTo(1/Number(best_buenbit_ask),4)) - 0.01) * bid_cocos_usdt_ars / volumen - 1) * 100).toFixed(3);
 
-  // Fiwind mejor coin (USD/totalAsk mínimo). Sin comisión adicional.
   const { best_value: best_fiwind_ask, best_coin: best_fiwind_coin } = best_ER_in_exchange(prices, "fiwind", ["USDC","USDT"], "USD", "totalAsk");
   const bid_cocos_best = prices.cocoscrypto?.[best_fiwind_coin]?.ARS?.totalBid;
   const pct_d = (((volumen / oficial * roundTo(1/Number(best_fiwind_ask),4)) * bid_cocos_best / volumen - 1) * 100).toFixed(3);
 
-  const line6 = `${nowHHMMSS()} ${pct_a}%: oficial -> beloUSDT -> beloARS`;
-  const line7 = `${nowHHMMSS()} ${pct_b}%: oficial -> beloUSDT -> CocosCrypto -> CocosCryptoARS`;
-  const line8 = `${nowHHMMSS()} ${pct_c}%: oficial -> buenbit${best_buenbit_coin} -> CocosCrypto -> CocosCryptoARS`;
-  const line9 = `${nowHHMMSS()} ${pct_d}%: oficial -> fiwind${best_fiwind_coin} -> CocosCrypto -> CocosCryptoARS`;
-  const line10 = `${nowHHMMSS()} ${best_ratio(prices, oficial, volumen)}`;
+  const line2 = '';
+  const line3 = `${pct_a}%: oficial -> beloUSDT -> beloARS`;
+  const line4 = `${pct_b}%: oficial -> beloUSDT -> CocosCrypto -> CocosCryptoARS`;
+  const line5 = `${pct_c}%: oficial -> buenbit${best_buenbit_coin} -> CocosCrypto -> CocosCryptoARS`;
+  const line6 = `${pct_d}%: oficial -> fiwind${best_fiwind_coin} -> CocosCrypto -> CocosCryptoARS`;
+  const line7 = `${best_ratio(prices, oficial, volumen)}`;
 
-  elPrints.textContent = [line1,line2,line3,line4,line5,line6,line7,line8,line9].join("\n");
+  const lines = [line1, line2, line3, line4, line5, line6, line7];
+
+  // Actualiza cada línea en su span correspondiente; si falta la línea la crea.
+  for (let i = 0; i < lines.length; i++) {
+    const lineId = `prints_line${i+1}`;
+    let el = document.getElementById(lineId);
+    if (!el) {
+      // crear línea si no existe
+      el = document.createElement('div');
+      el.className = 'line';
+      el.id = lineId;
+      const span = document.createElement('span');
+      span.className = 'line-text';
+      el.appendChild(span);
+      elPrints.appendChild(el);
+    }
+    const span = el.querySelector('.line-text') || el;
+    const text = lines[i] || '';
+    span.textContent = text;
+
+    // Aplicar color según el primer número del texto (si corresponde)
+    applyColorToSpan(span, text, i);
+  }
 }
 
-// === Ciclo ===
+/* =========================== */
+
+ // === Ciclo ===
 async function tick() {
   try {
     setStatus("🔄 Actualizando…");

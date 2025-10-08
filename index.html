@@ -10,7 +10,7 @@
 <body>
   <header class="app-header">
     <h1>USD ⇄ USDT/USDC ⇄ ARS</h1>
-<p class="muted">Actualización cada 25s.</p>
+    <p class="muted">Actualización cada 25s.</p>
   </header>
 
   <main class="container">
@@ -28,7 +28,6 @@
             <input id="oficial" type="number" min="0" step="0.0001" />
             <button id="guardarOficial" class="btn btn-secondary" title="Guardar para próximas visitas">Guardar</button>
           </div>
-          
         </label>
       </div>
 
@@ -37,7 +36,18 @@
 
     <section class="panel">
       <h2>Ratios</h2>
-      <pre id="prints" class="console"></pre>
+
+      <!-- Cambié el <pre> por un contenedor con 7 líneas, cada una con su span -->
+      <div id="prints" class="console" role="status" aria-live="polite">
+        <div class="line" id="prints_line1"><span class="line-text"></span></div>
+        <div class="line" id="prints_line2"><span class="line-text"></span></div>
+        <div class="line" id="prints_line3"><span class="line-text"></span></div>
+        <div class="line" id="prints_line4"><span class="line-text"></span></div>
+        <div class="line" id="prints_line5"><span class="line-text"></span></div>
+        <div class="line" id="prints_line6"><span class="line-text"></span></div>
+        <div class="line best" id="prints_line7"><span class="line-text"></span></div>
+      </div>
+
       <div class="meta">
         <span id="status">⏳ Esperando datos…</span>
         <button id="refresh" class="btn">Actualizar ahora</button>
@@ -65,6 +75,7 @@
           <div class="price"><span>USDC/ARS</span> Vendé a:<span id="fiwind_usdc_ars">—</span></div>
           <div class="price"><span>USDT/ARS</span> Vendé a:<span id="fiwind_usdt_ars">—</span></div>
           <div class="price"><span>USDT/USD</span>Comprá a:<span id="fiwind_usdt_usd">—</span></div>
+          <div class="price"><span>USDC/USD</span>Comprá a:<span id="fiwind_usdc_usd">—</span></div>
         </div>
         <div class="price-card">
           <h3>CocosCrypto</h3>
