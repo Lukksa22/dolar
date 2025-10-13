@@ -4,9 +4,6 @@ const DEFAULTS = {
   oficial: 1455, // se puede sobrescribir por remoto o localStorage
 };
 
-// Hook opcional para persistencia global (ver index.html)
-const REMOTE_OFICIAL_URL = window.REMOTE_OFICIAL_URL || null;
-
 // === Helpers DOM ===
 const $ = (s) => document.querySelector(s);
 const elVolumen = $("#volumen");
@@ -79,32 +76,10 @@ function saveOficialLocal(v) {
   localStorage.setItem("oficial", String(v));
 }
 
-async function loadOficialRemote() {
-  if (!REMOTE_OFICIAL_URL) return null;
-  try {
-    const j = await fetchJSON(REMOTE_OFICIAL_URL);
-    if (j && typeof j.value === "number") return j.value;
-  } catch (_) {}
-  return null;
-}
-async function saveOficialRemote(v) {
-  if (!REMOTE_OFICIAL_URL) return false;
-  try {
-    const r = await fetch(REMOTE_OFICIAL_URL, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ value: Number(v) }),
-    });
-    return r.ok;
-  } catch (_) { return false; }
-}
-
 // === Carga inicial de inputs ===
 async function initInputs() {
   let oficial = loadOficialLocal();
-  if (oficial == null) {
-    oficial = await loadOficialRemote();
-  }
+
   elVolumen.value = DEFAULTS.volumen;
   elOficial.value = oficial != null ? oficial : DEFAULTS.oficial;
 }
@@ -112,10 +87,9 @@ async function initInputs() {
 elGuardar.addEventListener("click", async () => {
   const v = Number(elOficial.value);
   if (!isFinite(v) || v <= 0) { alert("Valor inválido para 'oficial'."); return; }
-  // Guardar local y remoto (si existe)
+  // Guardar local
   saveOficialLocal(v);
-  const remoteOK = await saveOficialRemote(v);
-  setStatus(remoteOK ? "💾 Guardado (global si hay endpoint remoto)" : "💾 Guardado local en este navegador");
+  setStatus("💾 Guardado local en este navegador");
 });
 
 // === Lectura de precios ===
@@ -158,8 +132,27 @@ function best_ER_in_exchange(prices, exchange, coinsList, fiat, actionRequested)
   return { best_value: best, best_coin };
 }
 
+function comision(exchange_in, exchange_out) {
+  const comision_rates = {
+    "belo": 1,
+    "buenbit": 0.02,
+    "cocoscrypto": 0,
+    "fiwind": 0.5,
+  };
+  if (exchange_in === exchange_out) {
+    return 0;
+  } else {
+    // fallback seguro: si no existe la exchange, devuelve 0
+    return comision_rates.hasOwnProperty(exchange_in) ? comision_rates[exchange_in] : 0;
+  }
+}
+
+
 function best_ratio(prices, oficial, volumen) {
   let max_ratio = -Infinity, coin_max = null, exc_in = null, exc_out = null;
+  let pct = 0;  
+  let top3_ratios = [];
+
   for (const coin of coins) {
     for (const ex_in of exchanges) {
       for (const ex_out of exchanges) {
@@ -167,15 +160,26 @@ function best_ratio(prices, oficial, volumen) {
         const bid = prices[ex_out]?.[coin]?.ARS?.totalBid;
         if (ask == null || bid == null) continue;
         const USDtoCoin = roundTo(1/ask, 4);
-        const formula = ( (volumen/oficial * USDtoCoin) * bid / volumen );
+        const formula = ( (volumen / oficial - comision(ex_in, ex_out)) * USDtoCoin * bid / volumen );
         if (formula > max_ratio) {
           max_ratio = formula; coin_max = coin; exc_in = ex_in; exc_out = ex_out;
-        }
+          pct = ((max_ratio - 1) * 100).toFixed(3);
+          if (top3_ratios.length === 0) {
+
+            top3_ratios = [[pct, `oficial -> ${exc_in}${coin_max} -> ${exc_out}ARS`],
+                           [pct, `oficial -> ${exc_in}${coin_max} -> ${exc_out}ARS`],
+                           [pct, `oficial -> ${exc_in}${coin_max} -> ${exc_out}ARS`]];
+
+          } else if (top3_ratios[0][0] < pct){
+            top3_ratios.unshift([pct, `oficial -> ${exc_in}${coin_max} -> ${exc_out}ARS`]);
+            top3_ratios.sort((a, b) => a[0] < b[0]);
+            top3_ratios.pop();
+          }
+        } 
       }
     }
   }
-  const pct = (max_ratio - 1) * 100;
-  return `${pct.toFixed(3)}%: oficial -> ${exc_in}${coin_max} -> ${exc_out}ARS (best ratio)`;
+  return top3_ratios;
 }
 // helper to avoid reference error in case exchange name was accidentally mistyped
 function exchangeCheck(name){
@@ -205,23 +209,37 @@ function extractFirstNumber(text) {
   return m ? Number(m[0]) : null;
 }
 
+function extractFirstFourCharacters(str) {
+  const slicedStr = str.slice(0, 5);
+  if (/^-/.test(slicedStr)) {
+    // The first character is a '-'
+    return -1;
+  } else if (/^\d+\.\d+$/.test(slicedStr)) {
+    // The first four characters are numbers with a '.' separator
+    return parseFloat(slicedStr);
+  } else {
+    // Invalid input
+    return null;
+  }
+}
+
 // aplica color directo al span según signo del número extraído
 function applyColorToSpan(span, text, i) {
   // resetear estilo
   span.style.color = "";
-  const num = extractFirstNumber(text);
+  const num = extractFirstFourCharacters(text);
   if (num == null || Number.isNaN(num)) return;
   if (i === 0) return;
 
   if (num < 0) {
-    if (i === 6) {span.style.color = "orange"; return; }
     span.style.color = "red";
-
-  } else if (num > 0) {
-    if (i === 6) {span.style.color = "GreenYellow"; return; }
-    span.style.color = "green";
-    
-  } else span.style.color = ""; // 0 -> usar color por defecto
+  } else if (num < 0.2) {    
+    span.style.color = "orange";
+  } else if (num < 0.8) {
+    span.style.color = "seagreen";
+  } else {
+    span.style.color = "GreenYellow"; 
+  }
 }
 
 function renderPrints(prices) {
@@ -229,6 +247,7 @@ function renderPrints(prices) {
   const oficial = Number(elOficial.value);
 
   const line1 = `${nowHHMMSS()} dolar oficial: ${oficial}`;
+  const line2 = " ";
 
   const ask_belo_usdt = prices.belo.USDT.USD.totalAsk;
   const bid_belo_usdt_ars = prices.belo.USDT.ARS.totalBid;
@@ -245,15 +264,28 @@ function renderPrints(prices) {
   const bid_cocos_best = prices.cocoscrypto?.[best_fiwind_coin]?.ARS?.totalBid;
   const pct_d = (((volumen / oficial * roundTo(1/Number(best_fiwind_ask),4)) * bid_cocos_best / volumen - 1) * 100).toFixed(3);
 
-  const line2 = '';
-  const line3 = `${pct_a}%: oficial -> beloUSDT -> beloARS`;
-  const line4 = `${pct_b}%: oficial -> beloUSDT -> CocosCrypto -> CocosCryptoARS`;
-  const line5 = `${pct_c}%: oficial -> buenbit${best_buenbit_coin} -> CocosCrypto -> CocosCryptoARS`;
-  const line6 = `${pct_d}%: oficial -> fiwind${best_fiwind_coin} -> CocosCrypto -> CocosCryptoARS`;
-  const line7 = `${best_ratio(prices, oficial, volumen)}`;
+  const top3_ratios = best_ratio(prices, oficial, volumen)
 
-  const lines = [line1, line2, line3, line4, line5, line6, line7];
+  const lines_ratios = [[pct_a, `oficial -> beloUSDT -> beloARS`],
+                        [pct_b, `oficial -> beloUSDT -> cocoscryptoARS`],
+                        [pct_c, `oficial -> buenbit${best_buenbit_coin} -> cocoscryptoARS`],
+                        [pct_d, `oficial -> fiwind${best_fiwind_coin} -> cocoscryptoARS`],
+                        [top3_ratios[0][0], top3_ratios[0][1]],
+                        [top3_ratios[1][0], top3_ratios[1][1]],
+                        [top3_ratios[2][0], top3_ratios[2][1]]];
+                        
+  let distinctList = lines_ratios.filter((item, index, arr) =>
+    index === 0 || item[1].trim() !== arr[index - 1][1].trim());
 
+  distinctList = distinctList.sort((a, b) => {
+    if (a[0] < b[0]) return -1;
+    if (a[0] > b[0]) return 1;
+    return 0;
+  });
+
+
+  const lines = [line1, line2, ...distinctList.map(line => `${line[0]}%: ${line[1]}`)];
+  
   // Actualiza cada línea en su span correspondiente; si falta la línea la crea.
   for (let i = 0; i < lines.length; i++) {
     const lineId = `prints_line${i+1}`;
