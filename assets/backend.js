@@ -20,20 +20,28 @@ const idMap = {
   "buenbit_usdc_ars": ["buenbit","USDC","ARS","totalBid"],
   "buenbit_usdt_ars": ["buenbit","USDT","ARS","totalBid"],
   "buenbit_usdt_usd": ["buenbit","USDT","USD","totalAsk"],
+  "cocos_usdc_ars": ["cocoscrypto","USDC","ARS","totalBid"],
+  "cocos_usdt_ars": ["cocoscrypto","USDT","ARS","totalBid"],
+  "tiendacrypto_usdc_ars": ["tiendacrypto","USDC","ARS","totalBid"],
+  "tiendacrypto_usdt_ars": ["tiendacrypto","USDT","ARS","totalBid"],
+  "tiendacrypto_usdt_usd": ["tiendacrypto","USDT","USD","totalAsk"],
+  "tiendacrypto_usdc_usd": ["tiendacrypto","USDC","USD","totalAsk"],
   "fiwind_usdc_ars": ["fiwind","USDC","ARS","totalBid"],
   "fiwind_usdt_ars": ["fiwind","USDT","ARS","totalBid"],
   "fiwind_usdt_usd": ["fiwind","USDT","USD","totalAsk"],
   "fiwind_usdc_usd": ["fiwind","USDC","USD","totalAsk"],
-  "cocos_usdc_ars": ["cocoscrypto","USDC","ARS","totalBid"],
-  "cocos_usdt_ars": ["cocoscrypto","USDT","ARS","totalBid"],
 };
 
+// 
 // === Estado ===
 const coins = ["USDT","USDC"];
-const exchanges = ["belo","cocoscrypto","buenbit","fiwind"];
+const exchanges = ["belo","cocoscrypto","buenbit","fiwind","tiendacrypto"];
 const actions = ["totalAsk","totalBid"];
 const fiats = ["USD","ARS"];
 let prices = initPrices();
+
+// not used exchange in formulas
+const exceptionsExchanges = ["fiwind"];
 
 function initPrices() {
   const p = {};
@@ -138,6 +146,7 @@ function comision(exchange_in, exchange_out) {
     "buenbit": 0.02,
     "cocoscrypto": 0,
     "fiwind": 0.5,
+    "tiendacrypto": 0,
   };
   if (exchange_in === exchange_out) {
     return 0;
@@ -148,39 +157,38 @@ function comision(exchange_in, exchange_out) {
 }
 
 
-function best_ratio(prices, oficial, volumen) {
-  let max_ratio = -Infinity, coin_max = null, exc_in = null, exc_out = null;
-  let pct = 0;  
-  let top3_ratios = [];
+function best_ratio(prices, oficial, volumen, exceptionsExchanges = []) {
+  const top = [];
 
   for (const coin of coins) {
     for (const ex_in of exchanges) {
+      if (exceptionsExchanges.includes(ex_in)) continue;
       for (const ex_out of exchanges) {
-        const ask = prices[exchangeCheck(ex_in)] ? prices[ex_in][coin]?.USD?.totalAsk : null;
-        const bid = prices[ex_out]?.[coin]?.ARS?.totalBid;
-        if (ask == null || bid == null) continue;
-        const USDtoCoin = roundTo(1/ask, 4);
-        const formula = ( (volumen / oficial - comision(ex_in, ex_out)) * USDtoCoin * bid / volumen );
-        if (formula > max_ratio) {
-          max_ratio = formula; coin_max = coin; exc_in = ex_in; exc_out = ex_out;
-          pct = ((max_ratio - 1) * 100).toFixed(3);
-          if (top3_ratios.length === 0) {
+        if (exceptionsExchanges.includes(ex_out)) continue;
 
-            top3_ratios = [[pct, `oficial -> ${exc_in}${coin_max} -> ${exc_out}ARS`],
-                           [pct, `oficial -> ${exc_in}${coin_max} -> ${exc_out}ARS`],
-                           [pct, `oficial -> ${exc_in}${coin_max} -> ${exc_out}ARS`]];
+        const inKey  = typeof exchangeCheck === "function" ? exchangeCheck(ex_in)  : ex_in;
+        const outKey = typeof exchangeCheck === "function" ? exchangeCheck(ex_out) : ex_out;
 
-          } else if (top3_ratios[0][0] < pct){
-            top3_ratios.unshift([pct, `oficial -> ${exc_in}${coin_max} -> ${exc_out}ARS`]);
-            top3_ratios.sort((a, b) => a[0] < b[0]);
-            top3_ratios.pop();
-          }
-        } 
+        const ask = prices?.[inKey]?.[coin]?.USD?.totalAsk ?? null;
+        const bid = prices?.[outKey]?.[coin]?.ARS?.totalBid ?? null;
+        if (ask == null || bid == null || ask <= 0 || volumen <= 0 || oficial <= 0) continue;
+
+        const USDtoCoin = roundTo(1 / ask, 4);
+        const ratio = ((volumen / oficial - comision(ex_in, ex_out)) * USDtoCoin * bid / volumen);
+        const pct = Number(((ratio - 1) * 100).toFixed(3));
+        if (!Number.isFinite(pct)) continue;
+
+        const desc = `oficial -> ${ex_in}${coin} -> ${ex_out}ARS`;
+        top.push([pct, desc]); // acumulamos TODO candidato
       }
     }
   }
-  return top3_ratios;
+
+  // Ordenamos numéricamente de mayor a menor y nos quedamos con 5
+  top.sort((a, b) => b[0] - a[0]);
+  return top.slice(0, 5);
 }
+
 // helper to avoid reference error in case exchange name was accidentally mistyped
 function exchangeCheck(name){
   return exchanges.includes(name) ? name : exchanges[0];
@@ -259,30 +267,26 @@ function renderPrints(prices) {
 
   const { best_value: best_buenbit_ask, best_coin: best_buenbit_coin } = best_ER_in_exchange(prices, "buenbit", ["USDC","USDT"], "USD", "totalAsk");
   const pct_c = ((((volumen / oficial * roundTo(1/Number(best_buenbit_ask),4)) - 0.01) * bid_cocos_usdt_ars / volumen - 1) * 100).toFixed(3);
+  
+  const top5_ratios = best_ratio(prices, oficial, volumen, exceptionsExchanges)
 
-  const { best_value: best_fiwind_ask, best_coin: best_fiwind_coin } = best_ER_in_exchange(prices, "fiwind", ["USDC","USDT"], "USD", "totalAsk");
-  const bid_cocos_best = prices.cocoscrypto?.[best_fiwind_coin]?.ARS?.totalBid;
-  const pct_d = (((volumen / oficial * roundTo(1/Number(best_fiwind_ask),4)) * bid_cocos_best / volumen - 1) * 100).toFixed(3);
-
-  const top3_ratios = best_ratio(prices, oficial, volumen)
-
-  const lines_ratios = [[pct_a, `oficial -> beloUSDT -> beloARS`],
-                        [pct_b, `oficial -> beloUSDT -> cocoscryptoARS`],
-                        [pct_c, `oficial -> buenbit${best_buenbit_coin} -> cocoscryptoARS`],
-                        [pct_d, `oficial -> fiwind${best_fiwind_coin} -> cocoscryptoARS`],
-                        [top3_ratios[0][0], top3_ratios[0][1]],
-                        [top3_ratios[1][0], top3_ratios[1][1]],
-                        [top3_ratios[2][0], top3_ratios[2][1]]];
+  let lines_ratios = [[pct_a, `oficial -> beloUSDT -> beloARS`],
+                      [pct_b, `oficial -> beloUSDT -> cocoscryptoARS`],
+                      [pct_c, `oficial -> buenbit${best_buenbit_coin} -> cocoscryptoARS`],
+                      [top5_ratios[0][0], top5_ratios[0][1]],
+                      [top5_ratios[1][0], top5_ratios[1][1]],
+                      [top5_ratios[2][0], top5_ratios[2][1]],
+                      [top5_ratios[3][0], top5_ratios[3][1]],
+                      [top5_ratios[4][0], top5_ratios[4][1]]
+                      ];
                         
-  let distinctList = lines_ratios.filter((item, index, arr) =>
-    index === 0 || item[1].trim() !== arr[index - 1][1].trim());
-
-  distinctList = distinctList.sort((a, b) => {
+  lines_ratios = lines_ratios.sort((a, b) => {
     if (a[0] < b[0]) return -1;
     if (a[0] > b[0]) return 1;
     return 0;
   });
-
+  const distinctList = lines_ratios.filter((item, index, arr) =>
+    index === 0 || item[1].trim() !== arr[index - 1][1].trim());
 
   const lines = [line1, line2, ...distinctList.map(line => `${line[0]}%: ${line[1]}`)];
   
