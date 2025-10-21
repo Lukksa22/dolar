@@ -218,7 +218,7 @@ function extractFirstNumber(text) {
 }
 
 function extractFirstFourCharacters(str) {
-  const slicedStr = str.slice(0, 5);
+  const slicedStr = str.slice(0, 4);
   if (/^-/.test(slicedStr)) {
     // The first character is a '-'
     return -1;
@@ -243,10 +243,12 @@ function applyColorToSpan(span, text, i) {
     span.style.color = "red";
   } else if (num < 0.2) {    
     span.style.color = "orange";
-  } else if (num < 0.8) {
+  } else if (num < 0.6) {
     span.style.color = "seagreen";
+  } else if (num < 1) {
+    span.style.color = "GreenYellow";
   } else {
-    span.style.color = "GreenYellow"; 
+    span.style.color = "Lime"; 
   }
 }
 
