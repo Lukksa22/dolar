@@ -1,4 +1,4 @@
-## Pagina web que permite consultar cotizaciones de dolar cripto y calcula rendimiento por transaccion entre billeteras virtuales.  
+### Pagina web que permite consultar cotizaciones de dolar cripto y calcula rendimiento por transaccion entre billeteras virtuales.  
 ### Permite ajustar los parametros:
  * Oficial: precio dolar oficial, debe actualizarse manualmente
  * Volumen: cantidad de pesos usados para la formula de conversion  
